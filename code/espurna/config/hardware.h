@@ -4115,6 +4115,42 @@
     #define SSDP_SUPPORT        1
     #define RF_SUPPORT          1
 
+#elif defined(NIXIE)
+    #define MANUFACTURER                "NODEMCU"
+	#define DEVICE                      "NIXIE"
+
+    #define LED1_PIN                    2   //D4
+	#define LED1_PIN_INVERSE            1
+
+    #define ALEXA_SUPPORT               0
+	#define DOMOTICZ_SUPPORT            0
+	#define SCHEDULER_SUPPORT           0
+	#define THINGSPEAK_SUPPORT          0
+    #define API_SUPPORT                 0
+    #define HOMEASSISTANT_SUPPORT       0
+    #define MQTT_SUPPORT                0
+
+    #define BROKER_SUPPORT              0
+    #define BUTTON_SUPPORT              0
+    #define DEBUG_SERIAL_SUPPORT        1
+    #define DEBUG_TELNET_SUPPORT        0
+    #define TELNET_SUPPORT              0
+    #define DEBUG_WEB_SUPPORT           1
+    #define LED_SUPPORT                 1
+    #define NOFUSS_SUPPORT              0
+
+    #define HEARTBEAT_MODE              HEARTBEAT_NONE
+    #define HEARTBEAT_REPORT_HOSTNAME       0
+    #define HEARTBEAT_REPORT_VERSION        0
+    #define HEARTBEAT_REPORT_MAC            0
+    #define HEARTBEAT_REPORT_RELAY          0
+    #define HEARTBEAT_REPORT_APP            0
+    #define HEARTBEAT_REPORT_BOARD          0
+    #define HEARTBEAT_REPORT_RSSI           0
+    #define HEARTBEAT_REPORT_LOADAVG        0
+
+    #define LOOP_DELAY_TIME                 2
+    
 #else
 
     #error "UNSUPPORTED HARDWARE!!"

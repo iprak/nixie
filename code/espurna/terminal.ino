@@ -346,9 +346,11 @@ void _terminalInitCommand() {
 void _terminalLoop() {
 
     #if DEBUG_SERIAL_SUPPORT
-        while (DEBUG_PORT.available()) {
-            _serial.inject(DEBUG_PORT.read());
-        }
+        #if !DEBUG_SERIAL_TX_ONLY
+            while (DEBUG_PORT.available()) {
+                _serial.inject(DEBUG_PORT.read());
+            }
+        #endif
     #endif
 
     embedis.process();

@@ -41,7 +41,11 @@ PROGMEM const char espurna_modules[] =
         "BUTTON "
     #endif
     #if DEBUG_SERIAL_SUPPORT
-        "DEBUG_SERIAL "
+        #if DEBUG_SERIAL_TX_ONLY
+            "DEBUG_SERIAL TX_ONLY "
+        #else
+            "DEBUG_SERIAL "
+        #endif
     #endif
     #if DEBUG_TELNET_SUPPORT
         "DEBUG_TELNET "

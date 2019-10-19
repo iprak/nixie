@@ -160,6 +160,10 @@ void buttonEvent(unsigned int id, unsigned char event) {
     }
     #endif // LIGHT_PROVIDER != LIGHT_PROVIDER_NONE
 
+    if (BUTTON_MODE_NIXIE == action) {
+        nixieSwitchMode();
+    }
+
 }
 
 void buttonSetup() {

@@ -4131,8 +4131,9 @@
     #define MQTT_SUPPORT                0
 
     #define BROKER_SUPPORT              0
-    #define BUTTON_SUPPORT              0
+    #define BUTTON_SUPPORT              1
     #define DEBUG_SERIAL_SUPPORT        1
+    #define DEBUG_SERIAL_TX_ONLY        1
     #define DEBUG_TELNET_SUPPORT        0
     #define TELNET_SUPPORT              0
     #define DEBUG_WEB_SUPPORT           1
@@ -4149,8 +4150,15 @@
     #define HEARTBEAT_REPORT_RSSI           0
     #define HEARTBEAT_REPORT_LOADAVG        0
 
-    #define LOOP_DELAY_TIME                 2
-    
+    #define LOOP_DELAY_TIME                 5
+
+    #define BUTTON1_PIN                     3   //RX
+    #define BUTTON1_MODE                    BUTTON_DEFAULT_HIGH //BUTTON_PUSHBUTTON
+    #define BUTTON1_PRESS                   BUTTON_MODE_NIXIE
+    #define BUTTON1_CLICK                   BUTTON_MODE_NONE
+    #define BUTTON1_DBLCLICK                BUTTON_MODE_AP
+    #define BUTTON1_LNGCLICK                BUTTON_MODE_RESET
+    #define BUTTON1_LNGLNGCLICK             BUTTON_MODE_FACTORY
 #else
 
     #error "UNSUPPORTED HARDWARE!!"

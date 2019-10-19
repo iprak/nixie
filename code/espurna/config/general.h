@@ -38,6 +38,10 @@
 #define DEBUG_SERIAL_SUPPORT    1               // Enable serial debug log
 #endif
 
+#ifndef DEBUG_SERIAL_TX_ONLY
+#define DEBUG_SERIAL_TX_ONLY    0
+#endif
+
 #ifndef DEBUG_PORT
 #define DEBUG_PORT              Serial          // Default debugging port
 #endif

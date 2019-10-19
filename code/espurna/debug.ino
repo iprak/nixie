@@ -127,7 +127,12 @@ void debugWebSetup() {
 void debugSetup() {
 
     #if DEBUG_SERIAL_SUPPORT
-        DEBUG_PORT.begin(SERIAL_BAUDRATE);
+        #if DEBUG_SERIAL_TX_ONLY
+            DEBUG_PORT.begin(SERIAL_BAUDRATE, SERIAL_8N1, SERIAL_TX_ONLY);
+        #else
+            DEBUG_PORT.begin(SERIAL_BAUDRATE);
+        #endif
+
         #if DEBUG_ESP_WIFI
             DEBUG_PORT.setDebugOutput(true);
         #endif

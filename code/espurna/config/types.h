@@ -50,7 +50,7 @@
 #define BUTTON_MODE_SMART_CONFIG    9
 #define BUTTON_MODE_DIM_UP          10
 #define BUTTON_MODE_DIM_DOWN        11
-
+#define BUTTON_MODE_NIXIE           12
 
 // Needed for ESP8285 boards under Windows using PlatformIO (?)
 #ifndef BUTTON_PUSHBUTTON

@@ -10,11 +10,12 @@
 #define NIXIE_C 13 // 74171 pin#6
 #define NIXIE_D 14 // 74171 pin#7
 
-#define NUMBER_OF_NIXIES 4
-#define DATE_DISPLAY_DURATION 5000
+#define NUMBER_OF_NIXIES 6
+#define DATETIME_DISPLAY_DURATION 5000
 #define IP_ADDRESS_DISPLAY_DURATION 1500
+#define ANTIPOISION_ADDRESS_DISPLAY_DURATION 1000
 
-#define NIXIE_BINARY_POSITION(n) (1 << (NUMBER_OF_NIXIES - n - 1))
+#define NIXIE_BINARY_POSITION(n) (1 << (NUMBER_OF_NIXIES - (n)-1))
 
 #define NIXIE_MODE_NONE 0
 #define NIXIE_MODE_DEMO 1
@@ -56,13 +57,18 @@ void _updateTimeFrame() {
         time_t t = now();
         int piece = hour(t);
         _timeValue[0] = piece / 10;
-        if (_timeValue[0] == 0) { // Turn off left most digit if 0
+        if (_timeValue[0] == 0) { // Turn off left most time digit if 0
             _timeValue[0] = -1;
         }
         _timeValue[1] = piece % 10;
         piece = minute(t);
         _timeValue[2] = piece / 10;
         _timeValue[3] = piece % 10;
+        if (NUMBER_OF_NIXIES == 6) {
+            piece = second(t);
+            _timeValue[4] = piece / 10;
+            _timeValue[5] = piece % 10;
+        }
 
         piece = month(t);
         _dateValue[0] = piece / 10;
@@ -70,13 +76,19 @@ void _updateTimeFrame() {
         piece = day(t);
         _dateValue[2] = piece / 10;
         _dateValue[3] = piece % 10;
-        // DEBUG_MSG_P(PSTR("%d%d:%d%d\n"), timeValue[0], timeValue[1], timeValue[2], timeValue[3]);
+        if (NUMBER_OF_NIXIES == 6) {
+            piece = year(t) % 100;
+            _dateValue[4] = piece / 10;
+            _dateValue[5] = piece % 10;
+        }
+        // DEBUG_MSG_P(PSTR("%d%d:%d%d:%d%d\n"), _timeValue[0], _timeValue[1], _timeValue[2], _timeValue[3],
+        // _timeValue[4],  _timeValue[5]);
     }
 }
 
 void _updateAntiPoisonFrame() {
     unsigned long current_time = millis();
-    if ((current_time - _lastDemoInstant) >= IP_ADDRESS_DISPLAY_DURATION) {
+    if ((current_time - _lastDemoInstant) >= ANTIPOISION_ADDRESS_DISPLAY_DURATION) {
         _lastDemoInstant = current_time;
         _fillBuffer((_buffer[0] + 1) % 10);
     }
@@ -184,6 +196,10 @@ void _writeValue(int value) {
     case 8:
         D = 1;
         break;
+
+    default:
+        A = B = C = D = 1;
+        break;
     }
 
     digitalWrite(NIXIE_A, A);
@@ -233,19 +249,21 @@ void _nixieTerminal() {
         terminalOK();
     });
 
-    terminalRegisterCommand(F("display"), [](Embedis *e) {
+    terminalRegisterCommand(F("disp"), [](Embedis *e) {
         int value;
         if (e->argc > 1) {
             value = String(e->argv[1]).toInt();
 
             _mode = NIXIE_MODE_NONE;
             _writeValue(value);
-            DEBUG_MSG_P(PSTR("value=%d\n"), value);
 
             if (e->argc > 2) {
-                value = String(e->argv[2]).toInt();
-                _turnNixieOn(value);
-                DEBUG_MSG_P(PSTR("nixie=%d\n"), value);
+                int nixie = String(e->argv[2]).toInt();
+                _turnNixieOn(NIXIE_BINARY_POSITION(nixie + 1));
+                DEBUG_MSG_P(PSTR("value=%d on nixie=%d\n"), value, nixie);
+            } else {
+                DEBUG_MSG_P(PSTR("value=%d on all\n"), value);
+                _turnAllNixiessOn();
             }
         }
 
@@ -307,12 +325,12 @@ void _nixieLoop() {
     case NIXIE_MODE_CLOCK:
         _updateTimeFrame();
 
-        // Swap date and time every DATE_DISPLAY_DURATION
-        if (displayDuration > DATE_DISPLAY_DURATION) {
+        // Swap date and time every DATETIME_DISPLAY_DURATION
+        if (displayDuration > DATETIME_DISPLAY_DURATION) {
             displayDuration = 0;
             showingDate = !showingDate;
-            _copyToBuffer(showingDate ? _dateValue : _timeValue);
         }
+        _copyToBuffer(showingDate ? _dateValue : _timeValue);
         break;
     case NIXIE_MODE_POISON:
         _updateAntiPoisonFrame();

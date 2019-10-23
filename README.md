@@ -1,5 +1,5 @@
 # Nixie
-This is a stripped down Espura firmware with only the bare essentials.
+This is a stripped down Espura firmware with only the bare essentials to drive a Nixie clock.
 
 
 # ESPurna Firmware

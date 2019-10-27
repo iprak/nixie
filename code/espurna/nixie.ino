@@ -1,3 +1,4 @@
+// Copyright Indu Prakash
 
 #include <TimeLib.h>
 
@@ -12,29 +13,26 @@
 
 #define NUMBER_OF_NIXIES 6
 #define DATETIME_DISPLAY_DURATION 5000
-#define IP_ADDRESS_DISPLAY_DURATION 1500
-#define ANTIPOISION_ADDRESS_DISPLAY_DURATION 1000
+#define IPADDRESS_DISPLAY_DURATION 1500
+#define DEMO_DISPLAY_DURATION 200
+#define COUNT_DISPLAY_DURATION 25
+#define DELAY_BETWEEN_DIGITDISPLAY 2000
 
 #define NIXIE_BINARY_POSITION(n) (1 << (NUMBER_OF_NIXIES - (n)-1))
 
 #define NIXIE_MODE_NONE 0
-#define NIXIE_MODE_DEMO 1
-#define NIXIE_MODE_CLOCK 2
-#define NIXIE_MODE_POISON 3
+#define NIXIE_MODE_CLOCK 1
+#define NIXIE_MODE_DEMO 2
+#define NIXIE_MODE_COUNT 3
 #define NIXIE_MODE_IP 4
 #define NIXIE_MODE_MAX 5
 
-int _timeValue[NUMBER_OF_NIXIES];
-int _dateValue[NUMBER_OF_NIXIES];
-int _buffer[NUMBER_OF_NIXIES];
-int _mode, _renderCount;
-int _ipAddrOctet = 0;
-unsigned long _renderTime = 0;
-unsigned long _renderWaitTime = 0;
-unsigned long _lastNTPInstant = 0;
-unsigned long _lastDemoInstant = 0;
-unsigned long _demoUpdateDelay = 50;
-unsigned long _delayBetweenDigits = 2500;
+int _mode, _renderCount, _ipAddrPiece;
+int _timeValue[NUMBER_OF_NIXIES], _dateValue[NUMBER_OF_NIXIES], _buffer[NUMBER_OF_NIXIES];
+unsigned long _renderTime, _renderWaitTime, _lastDraw;
+unsigned long _lastTimeUpdateInstant, _lastDemoInstant, _displayDuration;
+unsigned long _delayBetweenDigits;
+bool _showTimeWhenConnected, _updating, _showingDate;
 
 void _copyToBuffer(int *source) {
     for (int i = 0; i < NUMBER_OF_NIXIES; i++) {
@@ -48,18 +46,20 @@ void _fillBuffer(int value) {
     }
 }
 
-void _updateTimeFrame() {
-    unsigned long current_time = millis();
+void _initClockMode() {
+    _lastTimeUpdateInstant = 0;
+    _displayDuration = 0;
+    _showingDate = false;
+    _mode = NIXIE_MODE_CLOCK;
+}
 
-    if ((current_time - _lastNTPInstant) >= 1000) { // ntpSynced() &&
-        _lastNTPInstant = current_time;
+void _updateDateTime(unsigned long current_time) {
+    if ((current_time - _lastTimeUpdateInstant) >= 1000) { // Every second
+        _lastTimeUpdateInstant = current_time;
 
         time_t t = now();
         int piece = hour(t);
         _timeValue[0] = piece / 10;
-        if (_timeValue[0] == 0) { // Turn off left most time digit if 0
-            _timeValue[0] = -1;
-        }
         _timeValue[1] = piece % 10;
         piece = minute(t);
         _timeValue[2] = piece / 10;
@@ -86,23 +86,41 @@ void _updateTimeFrame() {
     }
 }
 
-void _updateAntiPoisonFrame() {
-    unsigned long current_time = millis();
-    if ((current_time - _lastDemoInstant) >= ANTIPOISION_ADDRESS_DISPLAY_DURATION) {
+void _initDemoMode() {
+    _lastDemoInstant = 0;
+    _buffer[0] = -1;
+    _mode = NIXIE_MODE_DEMO;
+}
+
+// Updates demo content in buffer. If in startup demo mode, then switched to clock mode upon Wifi connection.
+void _updateDemoFrame(unsigned long current_time) {
+    if ((current_time - _lastDemoInstant) >= DEMO_DISPLAY_DURATION) {
+        if (_showTimeWhenConnected && (WiFi.status() == WL_CONNECTED)) {
+            _initClockMode();
+            _showTimeWhenConnected = false;
+            return;
+        }
+
         _lastDemoInstant = current_time;
         _fillBuffer((_buffer[0] + 1) % 10);
     }
 }
 
-void _updateIpFrame() {
-    unsigned long current_time = millis();
-    if ((current_time - _lastDemoInstant) >= IP_ADDRESS_DISPLAY_DURATION) {
+void _initIPMode() {
+    _lastDemoInstant = 0;
+    _ipAddrPiece = 0;
+    _mode = NIXIE_MODE_IP;
+}
+
+// Updates IP address in buffer.
+void _updateIpFrame(unsigned long current_time) {
+    if ((current_time - _lastDemoInstant) >= IPADDRESS_DISPLAY_DURATION) {
         _lastDemoInstant = current_time;
         IPAddress ip = WiFi.localIP();
 
         _fillBuffer(-1); // Turn all digits off
 
-        int value = ip[_ipAddrOctet];               // e.g.   192
+        int value = ip[_ipAddrPiece];               // e.g.   192
         _buffer[NUMBER_OF_NIXIES - 1] = value % 10; // 2
         value = value / 10;                         // 19
         if (value > 0) {
@@ -113,13 +131,20 @@ void _updateIpFrame() {
             }
         }
 
-        _ipAddrOctet = (_ipAddrOctet + 1) % 4;
+        _ipAddrPiece = (_ipAddrPiece + 1) % 4;
     }
 }
 
-void _updateDemoFrame() {
-    unsigned long current_time = millis();
-    if ((current_time - _lastDemoInstant) >= _demoUpdateDelay) {
+void _initCountMode() {
+    _lastDemoInstant = 0;
+    _buffer[NUMBER_OF_NIXIES - 1] = 0;
+    _fillBuffer(-1);
+    _mode = NIXIE_MODE_COUNT;
+}
+
+// Updates counter in buffer.
+void _updateCountFrame(unsigned long current_time) {
+    if ((current_time - _lastDemoInstant) >= COUNT_DISPLAY_DURATION) {
         _lastDemoInstant = current_time;
 
         int i = NUMBER_OF_NIXIES - 1;
@@ -151,14 +176,15 @@ void _printStatus() {
     case NIXIE_MODE_CLOCK:
         DEBUG_MSG_P(PSTR("clock"));
         break;
-    case NIXIE_MODE_POISON:
-        DEBUG_MSG_P(PSTR("poison"));
+    case NIXIE_MODE_COUNT:
+        DEBUG_MSG_P(PSTR("count"));
         break;
     case NIXIE_MODE_IP:
         DEBUG_MSG_P(PSTR("ip"));
         break;
     }
-    DEBUG_MSG_P(PSTR(" render count=%d wait=%d time=%d\n"), _renderCount, _renderWaitTime, _renderTime);
+    DEBUG_MSG_P(PSTR(" renderCycles countBetween=%d wait=%d timeTaken=%d\n"), _renderCount, _renderWaitTime,
+                _renderTime);
 }
 
 void _writeValue(int value) {
@@ -214,25 +240,33 @@ void _turnNixieOn(int which) {
     digitalWrite(LATCH_PIN, 1);
 }
 
-void _turnAllNixiessOff() { _turnNixieOn(0); }
-void _turnAllNixiessOn() { _turnNixieOn(255); }
+void _turnAllNixiesOff() { _turnNixieOn(0); }
+void _turnAllNixiesOn() { _turnNixieOn(255); }
 
+// Button click callback
 void nixieSwitchMode() {
     _mode++;
     if (_mode >= NIXIE_MODE_MAX) {
-        _mode = NIXIE_MODE_DEMO;
+        _mode = NIXIE_MODE_NONE;
     }
+
+    // Don't switch to clock mode anymore if button was pressed
+    _showTimeWhenConnected = false;
 
     switch (_mode) {
-    case NIXIE_MODE_DEMO:
-        _fillBuffer(-1);
+    case NIXIE_MODE_CLOCK:
+        _initClockMode();
         break;
-    case NIXIE_MODE_POISON:
-        _fillBuffer(0);
+    case NIXIE_MODE_DEMO:
+        _initDemoMode();
+        break;
+    case NIXIE_MODE_COUNT:
+        _initCountMode();
+        break;
+    case NIXIE_MODE_IP:
+        _initIPMode();
         break;
     }
-
-    _printStatus();
 }
 
 void _nixieTerminal() {
@@ -244,8 +278,9 @@ void _nixieTerminal() {
     terminalRegisterCommand(F("delay"), [](Embedis *e) {
         if (e->argc > 1) {
             _delayBetweenDigits = String(e->argv[1]).toInt();
-            DEBUG_MSG_P(PSTR("delayBetweenDigits=%d\n"), _delayBetweenDigits);
         }
+        _renderCount = _renderWaitTime = _renderTime = 0;
+        DEBUG_MSG_P(PSTR("delayBetweenDigits=%d\n"), _delayBetweenDigits);
         terminalOK();
     });
 
@@ -263,7 +298,7 @@ void _nixieTerminal() {
                 DEBUG_MSG_P(PSTR("value=%d on nixie=%d\n"), value, nixie);
             } else {
                 DEBUG_MSG_P(PSTR("value=%d on all\n"), value);
-                _turnAllNixiessOn();
+                _turnAllNixiesOn();
             }
         }
 
@@ -272,102 +307,100 @@ void _nixieTerminal() {
     });
 
     terminalRegisterCommand(F("mode"), [](Embedis *e) {
-        int value;
         if (e->argc > 1) {
-            value = String(e->argv[1]).toInt();
+            int value = String(e->argv[1]).toInt();
+
             switch (value) {
-            case NIXIE_MODE_DEMO:
-                if (e->argc > 2) {
-                    _demoUpdateDelay = String(e->argv[2]).toInt();
-                }
-                _fillBuffer(-1);
-                _mode = NIXIE_MODE_DEMO;
-                break;
             case NIXIE_MODE_CLOCK:
-                _mode = NIXIE_MODE_CLOCK;
+                _initDemoMode();
                 break;
-            case NIXIE_MODE_POISON:
-                _fillBuffer(0);
-                _mode = NIXIE_MODE_POISON;
+            case NIXIE_MODE_DEMO:
+                _initDemoMode();
+                break;
+            case NIXIE_MODE_COUNT:
+                _initCountMode();
                 break;
             case NIXIE_MODE_IP:
-                _mode = NIXIE_MODE_IP;
+                _initIPMode();
                 break;
             }
+
+            if (value > NIXIE_MODE_NONE && value < NIXIE_MODE_MAX) {
+                // Don't switch to clock mode if command was issued
+                _showTimeWhenConnected = false;
+            }
         }
+
         _printStatus();
         terminalOK();
     });
 }
 
 void _nixieLoop() {
-    static unsigned long lastDraw = millis();
-    static bool showingDate;
-    static unsigned long displayDuration;
-
-    if (_mode == NIXIE_MODE_NONE || Update.isRunning()) { // Don't draw during updates
+    if (_mode == NIXIE_MODE_NONE || _updating) {
+        return;
+    }
+    if (Update.isRunning()) {
+        _updating = true;
+        _turnAllNixiesOn();
+        _writeValue(9);
         return;
     }
 
     unsigned long ts = millis();
+
     _renderCount++;
     if (_renderCount > 3000) {
         _renderCount = 1;
         _renderWaitTime = _renderTime = 0;
     }
-    _renderWaitTime += ts - lastDraw;
-    displayDuration += ts - lastDraw;
+    _renderWaitTime += ts - _lastDraw;
+    _displayDuration += ts - _lastDraw;
+
+    // We start in demo mode , _updateDemoFrame switches the mode to clock once WiFi has been connected.
+    if (_mode == NIXIE_MODE_DEMO) {
+        _updateDemoFrame(ts);
+    }
 
     switch (_mode) {
-    case NIXIE_MODE_DEMO:
-        _updateDemoFrame();
+    case NIXIE_MODE_COUNT:
+        _updateCountFrame(ts);
         break;
     case NIXIE_MODE_CLOCK:
-        _updateTimeFrame();
-
+        _updateDateTime(ts);
         // Swap date and time every DATETIME_DISPLAY_DURATION
-        if (displayDuration > DATETIME_DISPLAY_DURATION) {
-            displayDuration = 0;
-            showingDate = !showingDate;
+        if (_displayDuration > DATETIME_DISPLAY_DURATION) {
+            _displayDuration = 0;
+            _showingDate = !_showingDate;
         }
-        _copyToBuffer(showingDate ? _dateValue : _timeValue);
-        break;
-    case NIXIE_MODE_POISON:
-        _updateAntiPoisonFrame();
+        _copyToBuffer(_showingDate ? _dateValue : _timeValue);
         break;
     case NIXIE_MODE_IP:
-        _updateIpFrame();
+        _updateIpFrame(ts);
         break;
     }
 
-    bool sameValue = true;
-    for (int i = 1; i < NUMBER_OF_NIXIES; i++) {
-        sameValue = sameValue && (_buffer[i - 1] == _buffer[i]);
-    }
-
-    if (sameValue) {
-        if (_buffer[0] < 0) {
-            _turnAllNixiessOff();
+    for (int i = 0; i < NUMBER_OF_NIXIES; i++) {
+        int valueToWrite = _buffer[i];
+        if (valueToWrite < 0) {
+            _turnAllNixiesOff();
         } else {
-            _writeValue(_buffer[0]);
-            _turnAllNixiessOn();
-            delayMicroseconds(_delayBetweenDigits);
+            _writeValue(valueToWrite);
+
+            _turnAllNixiesOff(); // Blanking
+            delayMicroseconds(100);
+
+            _turnNixieOn(NIXIE_BINARY_POSITION(i));
         }
 
-    } else {
-        for (int i = 0; i < NUMBER_OF_NIXIES; i++) {
-            int valueToWrite = _buffer[i];
-            if (valueToWrite >= 0) {
-                _turnNixieOn(NIXIE_BINARY_POSITION(i));
-                _writeValue(valueToWrite);
-                delayMicroseconds(_delayBetweenDigits);
-            }
-        }
+        delayMicroseconds(_delayBetweenDigits);
     }
 
     // Capture times
-    lastDraw = ts;
+    _lastDraw = ts;
     _renderTime += millis() - ts;
+
+    // Automatic cathode anti-poisoning ?
 }
 
 void nixieSetup() {
@@ -384,9 +417,13 @@ void nixieSetup() {
 
     // Default values
     for (int i = 0; i < NUMBER_OF_NIXIES; i++) {
-        _timeValue[i] = _dateValue[i] = i + 1;
+        _timeValue[i] = _dateValue[i] = NUMBER_OF_NIXIES - i;
     }
-    _mode = NIXIE_MODE_CLOCK;
+
+    _delayBetweenDigits = DELAY_BETWEEN_DIGITDISPLAY;
+    _showTimeWhenConnected = true;
+    _initDemoMode(); // Start in demo, switch to clock when connected
+
     espurnaRegisterLoop(_nixieLoop);
     _nixieTerminal();
 }

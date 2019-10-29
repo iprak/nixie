@@ -247,7 +247,7 @@ void _turnAllNixiesOn() { _turnNixieOn(255); }
 void nixieSwitchMode() {
     _mode++;
     if (_mode >= NIXIE_MODE_MAX) {
-        _mode = NIXIE_MODE_NONE;
+        _mode = NIXIE_MODE_CLOCK;
     }
 
     // Don't switch to clock mode anymore if button was pressed

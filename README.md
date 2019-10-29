@@ -1,5 +1,35 @@
-# Nixie
-This is a stripped down Espura firmware with only the bare essentials to drive a Nixie clock.
+# Nixie Clock
+This 6 digit Nixie clock is based on Espura firmware which has been modified and stripped down to the bare essentials.
+
+Support for all other interfacing end points (Alexa, Domitcz, MQTT, heartbeat) has been turned off. Debugging is only available through Web.
+
+## Functionality
+
+There are 5 operating modes: 
+* 0 none: used to display a value on any nixie (for testing)
+* 1 clock
+* 2 demo: all nixies display same incrementing value
+* 3 count: simple counting
+* 4 ip: ip address is displayed
+
+The module starts in `demo` mode and switches to `clock` mode when wifi connection is established. In clock mode, the display switches between time and date every 5 seconds.
+
+The operating mode can also be selected from the debug terminal by typing `mode [value]` or by pressing the input button. Pressing the button simply cycles through the modes.
+
+## GPIOs
+
+The active digit is selected using 74171 which need 4 pins and the active nixie is turned on through multiplexing (using 74595 which needs 3 pins).
+
+Due to shortage of GPIO, I am using the RX pin as GPIO input and serial debugging has been disabled. 
+
+## Setup
+The only thing needed to be defined after flashing the firmware are the WiFi and NTP settings.
+
+## Modifications to Espurna Firmwarre
+
+Serial debugging has been restricted to Tx mode only by defining a new variable `DEBUG_SERIAL_TX_ONLY`. The `LOOP_DELAY_TIME` has been reduced to 5 ms for faster refresh.
+
+------
 
 
 # ESPurna Firmware

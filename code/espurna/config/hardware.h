@@ -4126,16 +4126,16 @@
 	#define DOMOTICZ_SUPPORT            0
 	#define SCHEDULER_SUPPORT           0
 	#define THINGSPEAK_SUPPORT          0
-    #define API_SUPPORT                 0
+    #define API_SUPPORT                 1
     #define HOMEASSISTANT_SUPPORT       0
-    #define MQTT_SUPPORT                0
+    #define MQTT_SUPPORT                1
 
     #define BROKER_SUPPORT              0
     #define BUTTON_SUPPORT              1
     #define DEBUG_SERIAL_SUPPORT        1
     #define DEBUG_SERIAL_TX_ONLY        1
     #define DEBUG_TELNET_SUPPORT        0
-    #define TELNET_SUPPORT              0
+    #define TELNET_SUPPORT              1
     #define DEBUG_WEB_SUPPORT           1
     #define LED_SUPPORT                 1
     #define NOFUSS_SUPPORT              0

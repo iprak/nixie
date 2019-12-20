@@ -1073,6 +1073,10 @@
 #define MQTT_TOPIC_IROUT            "irout"
 #define MQTT_TOPIC_OTA              "ota"
 
+//Nixie
+#define MQTT_TOPIC_NIXIE_MODE       "nixiemode"
+#define MQTT_TOPIC_NIXIE_DISPLAY    "nixiedisp"
+
 // Light module
 #define MQTT_TOPIC_CHANNEL          "channel"
 #define MQTT_TOPIC_COLOR_RGB        "rgb"
@@ -1398,6 +1402,9 @@
 // NTP
 // -----------------------------------------------------------------------------
 
+#define DATEFORMAT_MMDDYY       0
+#define DATEFORMAT_DDMMYY       1
+
 #ifndef NTP_SUPPORT
 #define NTP_SUPPORT                 1               // Build with NTP support by default (6.78Kb)
 #endif
@@ -1432,6 +1439,10 @@
 
 #ifndef NTP_DST_REGION
 #define NTP_DST_REGION              0               // 0 for Europe, 1 for USA (defined in NtpClientLib)
+#endif
+
+#ifndef NTP_DATEFORMAT
+#define NTP_DATEFORMAT           DATEFORMAT_MMDDYY               // 0 for MMDDYY, 1 for DDMMYY
 #endif
 
 #ifndef NTP_WAIT_FOR_SYNC

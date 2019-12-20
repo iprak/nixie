@@ -515,6 +515,7 @@ bool _wsOnKeyCheck(const char * key, JsonVariant& value) {
     if (strncmp(key, "hostname", 8) == 0) return true;
     if (strncmp(key, "desc", 4) == 0) return true;
     if (strncmp(key, "webPort", 7) == 0) return true;
+    if (strncmp(key, "dateFormat", 10) == 0) return true;
     return false;
 }
 
@@ -550,6 +551,7 @@ void _wsOnConnected(JsonObject& root) {
     root["wsAuth"] = getSetting("wsAuth", WS_AUTHENTICATION).toInt() == 1;
     root["hbMode"] = getSetting("hbMode", HEARTBEAT_MODE).toInt();
     root["hbInterval"] = getSetting("hbInterval", HEARTBEAT_INTERVAL).toInt();
+    root["dateFormat"] = getSetting("dateFormat", DATEFORMAT_MMDDYY).toInt();
 }
 
 void wsSend(JsonObject& root) {

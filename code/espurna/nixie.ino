@@ -21,12 +21,12 @@
 #define NIXIE_BINARY_POSITION(n) (1 << (NUMBER_OF_NIXIES - (n)-1))
 
 #define NIXIE_MODE_NONE 0
-#define NIXIE_MODE_CLOCK 1
-#define NIXIE_MODE_DEMO 2
-#define NIXIE_MODE_COUNT 3
-#define NIXIE_MODE_IP 4
-#define NIXIE_MODE_TIMELEFT 5
-#define NIXIE_MODE_STATIC 6
+#define NIXIE_MODE_CLOCK 1        //Clock
+#define NIXIE_MODE_DEMO 2         //Demo (all digits going from 0-9)
+#define NIXIE_MODE_COUNT 3        //Counter
+#define NIXIE_MODE_IP 4           //Display the ip address
+#define NIXIE_MODE_TIMELEFT 5     //Time left till midnight
+#define NIXIE_MODE_STATIC 6       //Display static value passed through "disp" command
 #define NIXIE_MODE_MAX 7
 
 int _mode, _renderCount, _ipAddrPiece, _dateFormat;

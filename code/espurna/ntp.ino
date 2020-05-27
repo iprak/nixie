@@ -13,6 +13,8 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 #include <Ticker.h>
 
 #include "libs/NtpClientWrap.h"
+#include "broker.h"
+#include "ws.h"
 
 Ticker _ntp_defer;
 
@@ -122,11 +124,13 @@ void _ntpReport() {
 
     _ntp_report = false;
 
+    #if DEBUG_SUPPORT
     if (ntpSynced()) {
         time_t t = now();
         DEBUG_MSG_P(PSTR("[NTP] UTC Time  : %s\n"), ntpDateTime(ntpLocal2UTC(t)).c_str());
         DEBUG_MSG_P(PSTR("[NTP] Local Time: %s\n"), ntpDateTime(t).c_str());
     }
+    #endif
 
 }
 
@@ -136,7 +140,7 @@ void inline _ntpBroker() {
     static unsigned char last_minute = 60;
     if (ntpSynced() && (minute() != last_minute)) {
         last_minute = minute();
-        brokerPublish(BROKER_MSG_TYPE_DATETIME, MQTT_TOPIC_DATETIME, ntpDateTime().c_str());
+        TimeBroker::Publish(MQTT_TOPIC_DATETIME, now(), ntpDateTime());
     }
 }
 
